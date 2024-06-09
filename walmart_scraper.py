@@ -22,21 +22,25 @@ product_queue = queue.Queue()
 seen_urls = set()
 
 
+# Function to get product links from a search page
 def get_product_links_from_search_page(query, page_number):
     search_url = f"https://www.walmart.com/search?q={query}&page={page_number}"
     response = requests.get(search_url, headers=BASE_HEADERS)
     soup = BeautifulSoup(response.text, "html.parser")
     product_links = []
 
+    # Find all product links on the page
     found = False
     for a_tag in soup.find_all("a", href=True):
-        if "/ip/" in a_tag["href"]:
+        if "/ip/" in a_tag["href"]:  # Identify product links
             found = True
+            # Construct the full URL for the product
             if "https" in a_tag["href"]:
                 full_url = a_tag["href"]
             else:
                 full_url = BASE_URL + a_tag["href"]
 
+            # Avoid adding duplicate URls
             if full_url not in seen_urls:
                 product_links.append(full_url)
 
@@ -46,6 +50,7 @@ def get_product_links_from_search_page(query, page_number):
     return product_links
 
 
+# Function to extract product information from a product page
 def extract_product_info(product_url):
     print("Processing URL", product_url)
     response = requests.get(product_url, headers=BASE_HEADERS)
@@ -55,11 +60,13 @@ def extract_product_info(product_url):
     if script_tag is None:
         return None
 
+    # Parsing dat
     data = json.loads(script_tag.string)
     initial_data = data["props"]["pageProps"]["initialData"]["data"]
     product_data = initial_data["product"]
     reviews_data = initial_data.get("reviews", {})
 
+    # Relevant product information
     product_info = {
         "price": product_data["priceInfo"]["currentPrice"]["price"],
         "review_count": reviews_data.get("totalReviewCount", 0),
@@ -75,6 +82,7 @@ def extract_product_info(product_url):
     return product_info
 
 
+# Main function to control the flow of the script
 def main():
     with open(OUTPUT_FILE, "w") as file:
         while search_queries:
